@@ -13,11 +13,11 @@ This repository contains two independently deployed Cloud applications:
 
 Your frontend lives in its own project and connects to the backend's public URL. For a simple standalone example, use [convex-cloud-demo](https://github.com/joshcirre/convex-cloud-demo), based on Convex's official TanStack Start template. Adding the dashboard does not change the backend's root directory or commands.
 
-**Validation (2026-09-28):** This recipe is based on Lawn's completed Cloud deployment: Convex backed by MySQL and private object storage, the hosted Convex dashboard, a TanStack frontend, and a Laravel auth API. The backend release is `precompiled-2026-09-26-27ef234`, with `convex@1.41.0` and a dashboard image from the matching commit. The starter retains that deployment's networking configuration. Its scripts and local dashboard have been checked separately; deployment of this standalone repository still needs its own Cloud verification.
+**Validation (2026-09-28):** An independent agent deployed this standalone starter on Cloud with a 1 GB backend, private MySQL/object storage, a 512 MB dashboard, and a 512 MB TanStack demo frontend. Function deployment, dashboard login, WebSockets, two-tab realtime updates, and data/function persistence after a backend redeploy passed. It used existing CLI/GitHub access plus the documented API without Cloud browser sign-in. Sleep/wake timing, load testing, uploaded files, and backup recovery remain untested. Backend release: `precompiled-2026-09-26-27ef234`; CLI: `convex@1.41.0`; dashboard: matching commit.
 
 ## Deploy with an agent
 
-Use the [agent deployment guide and copyable prompt](docs/agents/README.md) for account setup, CLI installation/authentication, provisioning, deployment, and verification. It uses the Cloud CLI where supported and identifies the remaining browser steps.
+Use the [agent deployment guide and copyable prompt](docs/agents/README.md) for account setup, CLI installation/authentication, provisioning, deployment, and verification. It reuses existing access and uses the Cloud CLI plus a small API helper for missing settings. Start with the [low-cost demo profile and pricing](docs/costs.md).
 
 ## Setup
 
@@ -49,16 +49,16 @@ Create an application from your repository and configure its environment:
 | Build commands | `bash build.sh` |
 | Deploy commands | Leave empty |
 | Start command | `bash start.sh` |
-| Compute | 1 GB for a small demo to validate; 2 GB for a conservative starting point (see sizing below) |
+| Compute | One 1 GB instance passed the demo tests; choose a current size ID using the [cost guide](docs/costs.md) |
 | Replicas | One; disable autoscaling or set minimum and maximum to 1 |
-| Scale-to-zero / hibernation | Disabled |
+| Scale-to-zero / hibernation | Five minutes for a disposable demo; disabled for continuous service (see [profiles](docs/costs.md)) |
 | Region | Same region as your MySQL database |
 
-These are the direct commands used by Lawn's backend on Cloud. The included `npm run build` and `npm start` scripts call the same Bash scripts, but use the direct commands above for this setup. Keep the long-running backend in the **Start command**, not **Deploy commands**.
+These are the direct commands used by Lawn's backend on Cloud. The included `npm run build` and `npm start` scripts call the same Bash scripts. The standalone agent test verified that Cloud automatically runs the package start script; no custom start-command browser override was needed. Keep the long-running backend in the **Start command**, not **Deploy commands**.
 
 Save the public HTTPS URL Cloud assigns. The examples below use `https://YOUR-BACKEND.laravel.cloud`; replace it with your actual URL. Do not include a trailing slash.
 
-For this reusable starter, keep the backend always on: it owns a database lease and maintains subscriptions and scheduled work. Multiple replicas sharing the same instance are not a supported scaling strategy for this starter. See [Cloud compute settings](https://laravel.com/cloud/docs/compute).
+For continuous service, keep the backend always on: it owns a database lease and maintains subscriptions and scheduled work. A disposable demo can opt into five-minute hibernation with cold starts and interrupted or delayed work; configured timeouts are not proof of actual sleep savings. Multiple replicas sharing the same instance are not a supported scaling strategy for this starter. See [Cloud compute settings](https://laravel.com/cloud/docs/compute).
 
 ### How small can the backend be?
 
@@ -68,7 +68,7 @@ Convex's [upstream Fly configuration](https://github.com/get-convex/convex-backe
 
 The Rust process embeds V8 for queries, mutations, and default-runtime actions. Node remains installed for `"use node"` actions and this starter's small ingress proxy. [Function bundling](https://docs.convex.dev/functions/bundling) normally happens on the machine running the Convex CLI, then uploads to the backend; external Node packages can also require server-side installation. Removing Node is not a supported optimization for these scripts. The [number demo](https://github.com/joshcirre/convex-cloud-demo) has no `"use node"` actions.
 
-For a cost-conscious demo, choose an available 1 GB compute size and measure peak memory during startup, function deployment, subscriptions, mutations, and a backend redeploy. Leave headroom and increase RAM if you see memory pressure or restarts. A 512 MB backend is **unvalidated** here. Neither 1 GB nor 512 MB has been load-tested by this starter on Cloud. MySQL, the optional dashboard, and the frontend each have their own resource allocations.
+For a cost-conscious demo, choose an available 1 GB compute size and measure peak memory during startup, function deployment, subscriptions, mutations, and a backend redeploy. Leave headroom and increase RAM if you see memory pressure or restarts. A 512 MB backend is **unvalidated** here. The 1 GB legacy size passed the functional deployment test, but neither size has been load-tested and cheaper compute families need their own checks. MySQL, the optional dashboard, and the frontend each have their own resource allocations.
 
 ### 2. Attach MySQL and a private bucket
 

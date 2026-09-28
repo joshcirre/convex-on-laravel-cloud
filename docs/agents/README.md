@@ -13,11 +13,15 @@ local tools and Cloud access, install missing prerequisites where possible, and
 use the Cloud CLI for the steps it supports. Guide me through account creation,
 billing, and authorization in the browser. Explain any remaining browser steps.
 
-Deploy a separate Convex backend with private managed MySQL and private object
-storage, plus the optional dashboard. Ask for missing organization, region,
-repository, app names, dashboard preference, and spending constraints together.
+Use the low-cost demo profile: a 1 GB backend, the smallest private managed
+MySQL, private object storage, and five-minute scale-to-zero where supported.
+Explain cold starts and sleeping limitations. Run the frontend and dashboard
+locally unless I request hosted versions (512 MB each). Discover current size
+IDs and prices. Reuse existing authentication and GitHub access. Ask only for
+missing organization, region, names, and hosted-app preferences together.
 Reuse decisions and authorization I have already supplied. Explain the resources
-and their ongoing cost before creating them. Do not modify unrelated applications.
+and their estimated ongoing cost before creating them. A numeric budget is
+optional; do not repeatedly ask for one if I already requested the cheapest demo. Do not modify unrelated applications.
 
 Discover the installed CLI's actual flags. Keep secrets out of chat, Git, public
 frontend variables, and build logs. Configure persistence before deploying.
@@ -27,7 +31,7 @@ and persistence across a redeploy. Report what you tested and anything unfinishe
 
 ## What can be automated?
 
-**Audited September 28, 2026 against Cloud CLI v0.6.1**, its installed source, and the [official CLI documentation](https://laravel.com/cloud/docs/api/cli). This is a CLI-first runbook with browser handoffs, not a tested one-command installer. Recheck help on the installed version; newer releases may close these gaps.
+**Audited September 28, 2026 against Cloud CLI v0.6.1**, its installed source, a successful independent deployment of this starter, and the [official CLI documentation](https://laravel.com/cloud/docs/api/cli). This is a CLI-first runbook with a small documented API bridge, not a one-command installer. The test deployment used existing CLI credentials and GitHub access without signing into the Cloud website. Recheck help on the installed version; newer releases may close these gaps.
 
 | Step | v0.6.1 route |
 | --- | --- |
@@ -37,24 +41,25 @@ and persistence across a redeploy. Report what you tested and anything unfinishe
 | Authenticate CLI | `cloud auth -n`, then user authorizes in browser; API token alternative below |
 | Create applications/environments, database, bucket | CLI |
 | Build/deploy commands, database attachment, variables, compute | CLI; read back settings |
-| Node version and custom start command | Browser; no corresponding `environment:update` flags |
-| Attach bucket as default filesystem | Browser; no CLI attachment flag |
-| Disable hibernation | CLI flag exists, but verify effective setting; browser fallback |
+| Node version | Included API helper; no `environment:update` flag |
+| Start command | Cloud runs the committed `package.json` start script; verified for all three apps |
+| Attach bucket as default filesystem | Included API helper; no CLI attachment flag |
+| Configure hibernation | CLI or API helper; read back the effective timeout |
 | Deploy, monitor, execute remote commands | CLI |
 | Deploy Convex functions | Convex CLI, from the application project |
 | Dashboard admin-key login | User in browser |
 
-The [public environment API](https://laravel.com/cloud/docs/api/environments/update-environment) supports `node_version` and `filesystem_keys`, but its documented schema does not expose the custom start command. Do not invent `--start-command`, `--node-version`, or `--filesystem-keys` CLI flags. A documented API request can replace some browser work, but is a separate API integration, not a Cloud CLI feature. Preserve existing filesystem attachments when using that API.
+The [public environment API](https://laravel.com/cloud/docs/api/environments/update-environment) supports `node_version` and `filesystem_keys`, but its documented schema does not expose the custom start command. Do not invent `--start-command`, `--node-version`, or `--filesystem-keys` CLI flags. The helper below uses this documented API with existing CLI credentials. No start-command API override is needed for these repositories because their committed `package.json` scripts provide the correct startup commands. This is an API integration alongside the CLI, not a built-in CLI feature. Preserve existing filesystem attachments when using that API.
 
 ## 1. Establish scope and access
 
-Collect only missing decisions: Cloud organization, region, repository/branch, backend and dashboard names, whether a dashboard is wanted, and compute/database budget. Use a new deployment by default. Do not reuse another project's database, bucket, or instance secret. Record resource IDs and public URLs in a local deployment note without credentials.
+Collect only missing decisions: Cloud organization, region, repository/branch, backend and dashboard names, whether a dashboard is wanted, and whether this is a sleeping demo or an always-on service. A budget number is optional when the user already asked for minimum cost. Use a new deployment by default. Do not reuse another project's database, bucket, or instance secret. Record resource IDs and public URLs in a local deployment note without credentials. Discover available regions before offering them; the test requested US West but only Ohio was available as its closest US option. Do not hardcode that observation for future accounts.
 
-The backend needs one always-on instance, 1 GB RAM for a small demo to validate or 2 GB as a conservative starting point, a private MySQL cluster/database, and a private bucket. The optional dashboard adds another application instance. Consult [current pricing](https://cloud.laravel.com/pricing); do not promise free or fixed-cost hosting. The [trial](https://laravel.com/cloud/docs/free-trial) has limits.
+Start with the [low-cost profiles](../costs.md): the verified 1 GB backend, smallest private MySQL with 5 GB storage, and a private bucket. Keep the frontend and dashboard local unless hosted versions are requested; each hosted app worked on 512 MB. Use five-minute hibernation for a disposable demo that accepts cold starts and paused work, or disable backend hibernation for continuous scheduled work/subscriptions. Do not claim sleep savings until observed. Consult [current pricing](https://cloud.laravel.com/pricing); do not promise free or fixed-cost hosting. The [trial](https://laravel.com/cloud/docs/free-trial) has limits.
 
 If the user has no account, guide them to [Laravel Cloud](https://cloud.laravel.com) to sign up, verify their account, choose a plan, and supply any requested payment details. The user handles passwords, payment information, and identity checks. An agent can guide this flow but cannot substitute CLI calls for account creation.
 
-In **Account settings → Source controls**, connect GitHub and authorize Cloud's GitHub App for the repository to deploy. A public repository or successful `gh auth` does not grant Cloud access. See [source control setup](https://laravel.com/cloud/docs/source-control).
+First check existing CLI authorization and repository access. Do not ask an already authorized user to sign into Cloud just because the browser is logged out. Only if repository access is missing, use **Account settings → Source controls** to connect GitHub and authorize Cloud's GitHub App for the repository to deploy. A public repository or successful `gh auth` does not grant Cloud access. See [source control setup](https://laravel.com/cloud/docs/source-control).
 
 ## 2. Install and authenticate the tools
 
@@ -65,8 +70,11 @@ composer global require laravel/cloud-cli
 export PATH="$(composer global config bin-dir --absolute):$PATH"
 cloud --version -n
 cloud auth -h -n
+# Only if no valid token is already available:
 cloud auth -n
 ```
+
+Before authenticating, run `cloud auth:token --list --json -n` and verify the intended organization. Reuse valid credentials. Check the actual `node --version`; a directory named `node@22` is not proof of its version.
 
 Persist the Composer bin path in the user's shell configuration if needed. `cloud auth -n` still requires browser authorization; `-n` disables terminal questions, not OAuth consent. Wait for authorization to finish. If localhost callback authentication fails, inspect the error and PHP sockets support or use a token.
 
@@ -125,35 +133,77 @@ cloud environment:update "$BACKEND_ENV_ID" --database-id="$DATABASE_ID" \
   --build-command='bash build.sh' --deploy-command='' --json -n --force
 ```
 
-Check currently available engine versions and region support before creating the cluster. In v0.6.1, noninteractive `database-cluster:create` selects its default **Dev** preset (private, 512 MiB, 5 GB storage). There is no preset/size flag on this command. This is an audited CLI default, not a production sizing recommendation. If it does not fit the agreed budget or capacity, configure the cluster in Cloud's UI before proceeding. Do not confuse database RAM with the backend's 2 GB RAM. Wait for the cluster/schema to become ready before deployment.
+Check currently available engine versions and region support before creating the cluster. In v0.6.1, noninteractive `database-cluster:create` selects its default **Dev** preset (private, 512 MiB, 5 GB storage). There is no preset/size flag on this command. This is an audited CLI default, not a production sizing recommendation. If it does not fit the agreed budget or capacity, configure the cluster in Cloud's UI before proceeding. Do not confuse database RAM with the backend's 2 GB RAM. Wait for the cluster to report ready via `database-cluster:get` **before** calling `database:create`. The test failed schema creation while the cluster was still provisioning. Poll with a bounded timeout; after any timeout list schemas before retrying creation. Then wait for the schema before deployment.
 
 Create the bucket with read/write access:
 
 ```sh
 cloud bucket:create --name="$BUCKET_NAME" --visibility=private \
-  --jurisdiction=default --key-name=convex --key-permission=read_write --json -n
+  --jurisdiction=default --key-name=convex --key-permission=read_write \
+  --allowed-origins="$BACKEND_URL" --json -n
 ```
+
+The tested CLI requires `--allowed-origins` in noninteractive mode. Use the actual backend origin here; this bucket setting does not configure Convex WebSocket CORS.
 
 Use `eu` instead of `default` if the agreed storage jurisdiction requires it. The audited command advertises `--region` but does not send it in its bucket-create request; do not promise application-region placement from that flag. Keep credentials masked and record the bucket/key IDs for attachment.
 
+Select `BACKEND_SIZE` from `cloud instance:sizes --json -n` after checking its help. Use an available 1 GB option; do not copy a legacy size ID just because it appears in Lawn or the test record.
+
 ```sh
-cloud instance:update "$BACKEND_INSTANCE_ID" --size=flex-2gb \
-  --scaling-type=none --scale-to-zero=false --json -n --force
+cloud instance:update "$BACKEND_INSTANCE_ID" --size="$BACKEND_SIZE" \
+  --scaling-type=none --json -n --force
 ```
 
-Check `instance:sizes` for current choices first. The command above shows the conservative 2 GB option; substitute the agreed available 1 GB size for a small demo and follow the [sizing checks](../../README.md#how-small-can-the-backend-be). Confirm exactly one running backend and hibernation disabled. v0.6.1 sends an older sleep-mode field; the [current instance API](https://laravel.com/cloud/docs/api/instances/update-instance) gives `hibernation_timeout` precedence. A successful command alone does not prove hibernation is off. Use the browser if readback shows otherwise or omits the effective setting.
+Keep exactly one backend replica. The [cost guide](../costs.md) explains the two sleep profiles. Cloud instance timeouts are **minutes**; MySQL suspend timeouts are **seconds**.
 
-## 5. Complete the browser configuration together
+## 5. Configure the remaining settings from the terminal
 
-Bundle these into one Cloud configuration pass, using the exact app/environment created above:
+The successful standalone test used Cloud's generated startup configuration, which runs the committed `package.json` start script. Root `npm start` runs `bash start.sh`; the dashboard has its own start script. The demo frontend runs Nitro. Do not block on browser sign-in to set a redundant custom start command.
 
-1. Set **Node.js 22**, build `bash build.sh`, blank deploy commands, and start `bash start.sh`.
-2. Attach the private bucket/key as the default filesystem with read/write access. Verify Cloud supplies the `AWS_*` variables listed in the [backend guide](../../README.md#2-attach-mysql-and-a-private-bucket).
-3. Confirm the attached database is the schema matching the instance name, on a private endpoint in the app's region.
-4. Confirm one backend replica and scale-to-zero/hibernation disabled.
-5. Disable push-to-deploy during initial setup so a Git push cannot launch a half-configured backend. Re-enable only once the deployment sequence is understood.
+Use [scripts/cloud-api.py](../../scripts/cloud-api.py) for Node version, push-to-deploy, bucket attachment, and effective hibernation settings. It requires Python 3 and curl, reuses `LARAVEL_CLOUD_TOKEN` or exactly one saved CLI token, and checks the expected organization **before** accessing a resource. With multiple saved tokens, select one through a protected process environment; it deliberately does not guess. It prints only selected settings and resource relationships, withholding API error bodies and credentials.
 
-An authorized browser-capable agent can configure these settings. Otherwise give the user the app link and exact values, and wait for completion before deploying. Account credentials and consent remain with the user.
+First inspect the target and its existing bucket attachments:
+
+```sh
+python3 scripts/cloud-api.py GET "environments/$BACKEND_ENV_ID?include=instances,buckets" \
+  --organization="$ORG_ID"
+```
+
+Prepare a local JSON file with these fields (replace the example key ID with the bucket's actual **key ID**, not its bucket ID):
+
+```json
+{
+  "node_version": "22",
+  "uses_push_to_deploy": false,
+  "filesystem_keys": [
+    {"id": "YOUR_BUCKET_KEY_ID", "disk": "s3", "is_default_disk": true}
+  ]
+}
+```
+
+Create the ignored `.cloud/` directory if needed. Save it as `.cloud/backend-settings.json`, then:
+
+```sh
+python3 scripts/cloud-api.py PATCH "environments/$BACKEND_ENV_ID" \
+  --organization="$ORG_ID" --data-file=.cloud/backend-settings.json
+```
+
+This attachment example is for a **new backend with no other buckets**. `filesystem_keys` replaces the attachment list; preserve existing attachments when updating an existing environment. An empty array detaches all buckets. Use the Cloud UI if the existing key/disk mapping cannot be determined safely. Do not attach storage to the dashboard or frontend; their JSON only needs `node_version` and `uses_push_to_deploy`.
+
+For the low-cost demo, save `{"hibernation_timeout":5}` as `.cloud/instance-settings.json`. For the always-on backend, use `{"hibernation_timeout":null}` instead. Then:
+
+```sh
+python3 scripts/cloud-api.py PATCH "instances/$BACKEND_INSTANCE_ID" \
+  --organization="$ORG_ID" --data-file=.cloud/instance-settings.json
+python3 scripts/cloud-api.py GET "environments/$BACKEND_ENV_ID?include=instances,buckets" \
+  --organization="$ORG_ID"
+```
+
+Read back Node 22, one instance, expected timeout, and the private bucket relationship. Confirm database attachment and injected variable **names**, without revealing values. For hosted dashboard/frontend, use their own IDs and five-minute hibernation when appropriate.
+
+For eligible MySQL, inspect `database-cluster:update -h -n`; the test successfully used `--suspend-seconds=300` despite help labeling it Neon. Read back `config.suspend_seconds`. Preserve size, storage, private access, and backup settings. Use `0` for no database sleep. An idle Convex process may hold connections and prevent MySQL sleep; configured timeouts alone do not establish actual savings.
+
+If an API call fails, inspect its HTTP status, current docs, and CLI resource state. Do not guess undocumented fields or retry blindly. The Cloud UI remains a fallback if API access is unavailable. User browser interaction is still needed for a new account, billing, OAuth consent, or missing GitHub authorization.
 
 ## 6. Set backend variables without leaking secrets
 
@@ -201,7 +251,7 @@ On deployment failure, inspect the error and current resource state, fix the cau
 
 ## 8. Optional dashboard and application
 
-Create another application from the same repository with `--root-directory=dashboard`. Reuse the chosen region, and create or select its environment as above. Set its build command to `npm run build`, blank deploy commands, Node 22, and start command `npm start`. Set `NEXT_PUBLIC_DEPLOYMENT_URL` to the backend URL **before building**. Do not set `NEXT_PUBLIC_ADMIN_KEY`. The dashboard needs neither MySQL nor a bucket. Follow the [dashboard README](../../dashboard/README.md), then deploy and monitor with the dashboard app ID.
+Create another application from the same repository with `--root-directory=dashboard`. Reuse the chosen region, and create or select its environment as above. Set its build command to `npm run build`, blank deploy commands, and Node 22. Cloud uses its `npm start` script automatically. The standalone test used 512 MB with five-minute hibernation. Set `NEXT_PUBLIC_DEPLOYMENT_URL` to the backend URL **before building**. Do not set `NEXT_PUBLIC_ADMIN_KEY`. The dashboard needs neither MySQL nor a bucket. Follow the [dashboard README](../../dashboard/README.md), then deploy and monitor with the dashboard app ID.
 
 The backend infrastructure repo contains no application functions. For a small anonymous example, use [convex-cloud-demo](https://github.com/joshcirre/convex-cloud-demo) and follow its README after this backend is ready. Deploy them from the user's separate application project using an ignored `.env.self-hosted` containing `CONVEX_SELF_HOSTED_URL` and `CONVEX_SELF_HOSTED_ADMIN_KEY`. Set required Convex function environment variables before `npx convex deploy --env-file .env.self-hosted`. Use the backend-compatible CLI version from the backend README. Then build/deploy the frontend with only its public backend URL.
 
@@ -216,10 +266,12 @@ A successful build is insufficient. Record each result:
 - Open the frontend in two sessions and verify a live update without refresh; inspect the WebSocket connection if it fails.
 - If requested, log into the hosted dashboard with the admin key and inspect the same data. Its URL must target the correct backend.
 - Redeploy the backend, monitor recovery, and verify that the saved data and deployed functions remain available. If the demo exercises file storage, verify an uploaded file too.
-- Recheck one backend instance, hibernation disabled, private database/bucket, and absence of admin keys in public client configuration.
+- Recheck one backend instance, the chosen hibernation profile, private database/bucket, and absence of admin keys in public client configuration.
 
 Report the repository revision, CLI version, organization/resource IDs, public URLs, test results, and remaining steps. Separate locally checked behavior from live Cloud checks. Record secret **locations**, never their values. Back up the stable instance identity and document database/object-storage backup arrangements before using this as a production service. Leave failed resources documented for review; do not silently delete billed resources or data.
 
 ## Audit boundary
 
-The starter's scripts and local dashboard were checked separately, and its configuration is based on Lawn's working deployment. This onboarding runbook was checked against CLI help/source and official docs; it has **not yet been exercised end-to-end with a new Cloud account and fresh standalone deployment**. The browser handoffs above are intentional until supported CLI options or verified API behavior replace them.
+On September 28, 2026 an independent agent deployed this standalone starter using existing Cloud/GitHub access: 1 GB backend, 512 MB dashboard, private MySQL and bucket, then a 512 MB hosted demo frontend. Function deployment, WebSocket connection, two-tab updates, dashboard login, query/mutation/action, and data/function persistence after a backend redeploy passed. The new API helper has unit coverage and a live read-only check; its PATCH payloads reproduce those used in that deployment but have not been replayed through this helper against a fresh deployment.
+
+New-account onboarding, 512 MB backend operation, sleep/wake timing, load testing, uploaded-file persistence, backup recovery, and realized monthly bills remain unverified. Do not label configured scale-to-zero as tested sleep/wake behavior.

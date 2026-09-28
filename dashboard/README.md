@@ -6,6 +6,8 @@ Deploy the official self-hosted Convex dashboard as a separate Cloud application
 
 This folder packages the dashboard setup from Lawn. It downloads the application layers from the official Convex container image, verifies their SHA-256 hashes, and runs its standalone Next.js server with Node. Docker is not required on Cloud.
 
+For the cheapest setup, run the [dashboard locally](../README.md#running-the-dashboard-locally-instead) against the hosted backend. The hosted option below passed on 512 MB with five-minute hibernation; see [current size IDs and costs](../docs/costs.md).
+
 ## Deploy
 
 Create another Laravel Cloud application from this repository:
@@ -42,7 +44,7 @@ The browser connects directly to the backend. The dashboard does not proxy the b
 4. Reload a nested page such as `/data` and check that it still loads.
 5. Verify a realtime query updates after a mutation in a test deployment.
 
-This implementation is based on Lawn's completed Cloud dashboard deployment. On 2026-09-28, Lawn's public dashboard and `/data` route responded with the correct backend URL and no embedded admin key. The standalone starter's dashboard build and local routes have also been checked. Run the authenticated checks above on your own deployment; public route checks alone do not validate data access.
+This implementation is based on Lawn's completed Cloud dashboard deployment. On 2026-09-28, Lawn's public dashboard and `/data` route responded with the correct backend URL and no embedded admin key. The separate starter deployment also passed authenticated login, data/functions/logs, and nested-route checks on a 512 MB Cloud instance. Run the authenticated checks above on your own deployment; public route checks alone do not validate data access.
 
 ## Versions and build requirements
 
