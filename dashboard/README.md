@@ -1,5 +1,7 @@
 # Convex dashboard on Laravel Cloud
 
+For guided account setup and CLI provisioning, start with the [agent deployment guide](../docs/agents/README.md).
+
 Deploy the official self-hosted Convex dashboard as a separate Cloud application. It connects to your existing backend and lets you manage tables, functions, logs, and function environment variables.
 
 This folder packages the dashboard setup from Lawn. It downloads the application layers from the official Convex container image, verifies their SHA-256 hashes, and runs its standalone Next.js server with Node. Docker is not required on Cloud.

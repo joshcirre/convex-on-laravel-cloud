@@ -15,6 +15,10 @@ Your frontend lives in its own project and connects to the backend's public URL.
 
 **Validation (2026-09-28):** This recipe is based on Lawn's completed Cloud deployment: Convex backed by MySQL and private object storage, the hosted Convex dashboard, a TanStack frontend, and a Laravel auth API. The backend release is `precompiled-2026-09-26-27ef234`, with `convex@1.41.0` and a dashboard image from the matching commit. The starter retains that deployment's networking configuration. Its scripts and local dashboard have been checked separately; deployment of this standalone repository still needs its own Cloud verification.
 
+## Deploy with an agent
+
+Use the [agent deployment guide and copyable prompt](docs/agents/README.md) for account setup, CLI installation/authentication, provisioning, deployment, and verification. It uses the Cloud CLI where supported and identifies the remaining browser steps.
+
 ## Setup
 
 Fork [joshcirre/convex-on-laravel-cloud](https://github.com/joshcirre/convex-on-laravel-cloud), or connect that repository directly to Laravel Cloud.
