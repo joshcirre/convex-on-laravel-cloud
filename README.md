@@ -13,7 +13,7 @@ This repository contains two independently deployed Cloud applications:
 
 Your frontend lives in its own project and connects to the backend's public URL. Adding the dashboard does not change the backend's root directory or commands.
 
-**Validation:** Lawn's backend was verified on Laravel Cloud with release `precompiled-2026-09-26-27ef234` and `convex@1.41.0`. This starter pins that release and retains its Cloud networking workarounds. This standalone repository is ready for its first Cloud deployment test.
+**Validation (2026-09-28):** This recipe is based on Lawn's completed Cloud deployment: Convex backed by MySQL and private object storage, the hosted Convex dashboard, a TanStack frontend, and a Laravel auth API. The backend release is `precompiled-2026-09-26-27ef234`, with `convex@1.41.0` and a dashboard image from the matching commit. The starter retains that deployment's networking configuration. Its scripts and local dashboard have been checked separately; deployment of this standalone repository still needs its own Cloud verification.
 
 ## Setup
 
@@ -54,7 +54,7 @@ These are the direct commands used by Lawn's backend on Cloud. The included `npm
 
 Save the public HTTPS URL Cloud assigns. The examples below use `https://YOUR-BACKEND.laravel.cloud`; replace it with your actual URL. Do not include a trailing slash.
 
-Keep the backend always on: it owns a database lease and maintains subscriptions and scheduled work. Multiple replicas sharing the same instance are not a supported scaling strategy for this starter. See [Cloud compute settings](https://laravel.com/cloud/docs/compute).
+For this reusable starter, keep the backend always on: it owns a database lease and maintains subscriptions and scheduled work. Multiple replicas sharing the same instance are not a supported scaling strategy for this starter. See [Cloud compute settings](https://laravel.com/cloud/docs/compute).
 
 ### 2. Attach MySQL and a private bucket
 
@@ -82,6 +82,18 @@ MySQL is the recommended database for this starter. Convex also supports Postgre
 
 For external resources, see Convex's [SQL configuration](https://github.com/get-convex/convex-backend/blob/main/self-hosted/advanced/postgres_or_mysql.md) and [S3 configuration](https://github.com/get-convex/convex-backend/blob/main/self-hosted/advanced/s3_storage.md). Advanced `POSTGRES_URL`/`MYSQL_URL` overrides must be server URLs without a database path or query parameters; they bypass the script's attached-database name check and hostname rewrite.
 
+### Cloud MySQL connection setting
+
+Lawn's attached **private** Cloud MySQL endpoint presented a self-generated ProxySQL certificate that Convex could not verify (`UnknownIssuer`). Supplying the system CA bundle through `MYSQL_CA_FILE` did not fix that endpoint. The working deployment uses:
+
+```dotenv
+DO_NOT_REQUIRE_SSL=1
+```
+
+For the same private Cloud MySQL setup, set this explicitly. It disables TLS on the **backend-to-database connection**, so database traffic is unencrypted within Cloud's private network. Client-to-backend HTTPS is unaffected. Do not use this workaround for public or external database endpoints; use verified TLS there. If your Cloud endpoint provides a verifiable certificate, leave the setting unset (or use `0`) and configure its CA as needed.
+
+This is an observed Convex compatibility workaround, not a general Laravel Cloud requirement. Cloud's [MySQL SSL instructions](https://laravel.com/cloud/docs/resources/databases/laravel-mysql#laravel-mysql-ssl-connections) describe PHP's `MYSQL_ATTR_SSL_CA`; that variable does not configure the Convex Rust backend.
+
 ### 3. Configure the backend environment
 
 Generate an instance secret locally:
@@ -97,9 +109,14 @@ INSTANCE_NAME=convex
 INSTANCE_SECRET=YOUR_GENERATED_64_CHARACTER_HEX_SECRET
 CONVEX_CLOUD_ORIGIN=https://YOUR-BACKEND.laravel.cloud
 CONVEX_BACKEND_VERSION=precompiled-2026-09-26-27ef234
+DB_CONNECTION=mysql
+# Only for the private Cloud MySQL workaround described above:
+DO_NOT_REQUIRE_SSL=1
 ```
 
 `CONVEX_SITE_ORIGIN` defaults to `https://YOUR-BACKEND.laravel.cloud/http`. Leave it unset for this setup. Cloud supplies `PORT`; leave it alone.
+
+`DO_NOT_REQUIRE_SSL`, `DISABLE_BEACON`, and `REDACT_LOGS_TO_CLIENT` accept `1`/`true` to enable or `0`/`false`/unset to disable. TLS remains required when `DO_NOT_REQUIRE_SSL` is unset.
 
 The `.env.example` file is a reference template. The scripts read environment variables, not dotenv files. Enter the values in Cloud before deploying.
 
@@ -121,7 +138,7 @@ The ports vary with Cloud's `PORT`. Confirm the public backend responds:
 curl --fail https://YOUR-BACKEND.laravel.cloud/version
 ```
 
-Expect HTTP 200 and a backend version. This checks availability; the function and dashboard checks below exercise the deployment further.
+Expect HTTP 200. The pinned precompiled binary may return `unknown` as its version text; that is still a successful availability check. Use the pinned build release and deployment logs to identify the binary. This checks availability; the function and dashboard checks below exercise the deployment further.
 
 ### 5. Generate an admin key
 
@@ -151,8 +168,6 @@ Add `.env.self-hosted` to that project's `.gitignore`. Use a Convex CLI compatib
 ```sh
 # For a new project; existing projects should keep their tested dependency version.
 npm install convex@1.41.0
-
-npx convex deploy --env-file .env.self-hosted
 ```
 
 Set any environment variables your functions require before deploying them:
@@ -163,6 +178,12 @@ npx convex env set AUTH_ISSUER_URL https://auth.example.com --env-file .env.self
 ```
 
 These are **Convex function environment variables**, separate from Cloud's backend-process variables. Modules that read configuration during import may fail deployment until those variables exist.
+
+After setting those function variables, deploy:
+
+```sh
+npx convex deploy --env-file .env.self-hosted
+```
 
 For development against a separate instance:
 
@@ -193,10 +214,10 @@ Run the upstream dashboard locally and connect it to your Cloud backend:
 ```sh
 docker run --rm -p 127.0.0.1:6791:6791 \
   -e NEXT_PUBLIC_DEPLOYMENT_URL=https://YOUR-BACKEND.laravel.cloud \
-  ghcr.io/get-convex/convex-dashboard:latest
+  ghcr.io/get-convex/convex-dashboard:27ef2346e0fea1f7e9fbfe7bfae895164c89dbec
 ```
 
-Open `http://localhost:6791` and enter the admin key generated above. The browser connects directly to your public backend. For repeatable Docker deployments, choose and pin a compatible image tag or digest instead of `latest`.
+Open `http://localhost:6791` and enter the admin key generated above. The browser connects directly to your public backend. This image tag matches the backend release pinned by the starter.
 
 ## Deploying your frontend app
 
@@ -211,6 +232,14 @@ NEXT_PUBLIC_CONVEX_URL=https://YOUR-BACKEND.laravel.cloud
 ```
 
 Only the URL belongs in client-visible variables. If CI deploys functions, give that build process `CONVEX_SELF_HOSTED_URL` and `CONVEX_SELF_HOSTED_ADMIN_KEY` as secrets. Do not pass the admin key into your frontend bundle. See the [upstream frontend guidance](https://github.com/get-convex/convex-backend/blob/main/self-hosted/README.md#deploying-your-frontend-app).
+
+### Deployment order and automatic builds
+
+Deploy the backend and wait for `/version` before deploying functions or a frontend build that pushes functions. If using an auth API, bring that up and set its Convex configuration before pushing functions. Deploy the dashboard once the backend is reachable.
+
+When multiple Cloud apps track the same repository and branch, a push can trigger overlapping deployments. In Lawn, the frontend's Convex build step failed while the backend was redeploying and succeeded on retry after it recovered. For [apps sharing a repository](https://laravel.com/cloud/docs/monorepos), disable automatic push-to-deploy where necessary and deploy in sequence; retry a dependent frontend build only after the backend is healthy. Avoid simultaneous manual and push-triggered deployments.
+
+Lawn currently has hibernation enabled, but its one-minute Mux cron calls the public backend and keeps resetting Cloud's idle timer. A generic Convex application cannot rely on that behavior; keep scale-to-zero disabled when subscriptions and scheduled work must remain active.
 
 ## Verify the complete setup
 
@@ -229,6 +258,7 @@ Only the URL belongs in client-visible variables. If CI deploys functions, give 
 | Missing instance name or secret | Set both in the backend environment before deployment. |
 | Attached database name mismatch | Use the `INSTANCE_NAME` database, with hyphens replaced by underscores. |
 | Database or bucket required error | Attach both resources and verify the injected variable names against the table above. |
+| MySQL TLS `UnknownIssuer` | See the private Cloud MySQL connection setting above. Do not apply the no-TLS workaround to a public database. |
 | Postgres TLS hostname error (optional Postgres setup only) | The script handles Lawn's observed Cloud-to-Neon hostname pattern for `DATABASE_URL`/`DB_*`. For a different pattern, verify the provider's actual TLS hostname; do not disable TLS verification. |
 | Healthy backend logs but Cloud reports unhealthy | Keep `proxy.mjs` and `start.sh` together. The proxy listens on IPv6 and forwards to the IPv4 backend. |
 | WebSocket 400: Connection header did not include upgrade | The supplied proxy restores upgrade headers affected by Cloud's ingress. Cloud's Reverb/Pusher WebSockets resource is not needed. |
@@ -236,6 +266,26 @@ Only the URL belongs in client-visible variables. If CI deploys functions, give 
 | Disk exhaustion during build or startup | Increase backend compute; the binary and temporary files need local space even with remote storage. |
 | Function push fails reading an environment variable | Set the variable with `convex env set` before pushing functions. |
 | Dashboard rejects the key | Check the backend URL and generate a key using that backend's instance name and secret. |
+
+## Checking changes locally
+
+With Node.js 22 and Python 3 installed, run:
+
+```sh
+bash -n build.sh start.sh
+node --check proxy.mjs
+python3 -m unittest discover -s tests -v
+```
+
+The startup tests use fake child processes and credentials; they do not connect to a database or deployment. To verify the dashboard build and login page:
+
+```sh
+cd dashboard
+npm run build
+PORT=6791 NEXT_PUBLIC_DEPLOYMENT_URL=https://YOUR-BACKEND.laravel.cloud npm start
+```
+
+The backend build downloads a Linux binary and must be tested on Linux/Cloud. Local script tests do not replace a fresh Cloud deployment and the complete setup checks above.
 
 ## Backups and upgrades
 

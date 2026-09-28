@@ -40,7 +40,7 @@ The browser connects directly to the backend. The dashboard does not proxy the b
 4. Reload a nested page such as `/data` and check that it still loads.
 5. Verify a realtime query updates after a mutation in a test deployment.
 
-This folder is adapted from Lawn's dashboard work. Publishing it does not verify a Cloud deployment; run these checks on your environment before relying on it.
+This implementation is based on Lawn's completed Cloud dashboard deployment. On 2026-09-28, Lawn's public dashboard and `/data` route responded with the correct backend URL and no embedded admin key. The standalone starter's dashboard build and local routes have also been checked. Run the authenticated checks above on your own deployment; public route checks alone do not validate data access.
 
 ## Versions and build requirements
 
@@ -50,7 +50,7 @@ This folder is adapted from Lawn's dashboard work. Publishing it does not verify
 ghcr.io/get-convex/convex-dashboard:27ef2346e0fea1f7e9fbfe7bfae895164c89dbec
 ```
 
-That commit matches backend release `precompiled-2026-09-26-27ef234`. Linux ARM64 and x64 application layers are included. The build needs Node.js, `tar`, outbound HTTPS to GHCR, and enough temporary disk for the archives and extracted files. The downloaded `dist/` directory is ignored by Git.
+That commit matches backend release `precompiled-2026-09-26-27ef234`. Linux ARM64 and x64 application layers are included. The build needs Node.js, `tar`, outbound HTTPS to GHCR, and enough temporary disk for the archives and extracted files. The downloaded `dist/` directory and temporary `.build-*` staging directories are ignored by Git. Staging is kept beside the output so builds also work when `/tmp` is on another filesystem.
 
 To upgrade, choose a compatible upstream image, update both architectures' application-layer hashes in `build.mjs`, rebuild, and test login, data editing, logs, and nested navigation. There is no dashboard version environment override in this implementation.
 

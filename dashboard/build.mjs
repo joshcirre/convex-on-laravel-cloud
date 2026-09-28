@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { createWriteStream } from "node:fs";
 import { mkdir, mkdtemp, rename, rm, stat } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
@@ -34,7 +33,9 @@ async function main() {
   if (!tokenResponse.ok) throw new Error(`GHCR token request failed: ${tokenResponse.status}`);
   const { token } = await tokenResponse.json();
 
-  const temp = await mkdtemp(join(tmpdir(), "convex-cloud-dashboard-"));
+  // Stage beside dist so the final rename also works when /tmp is a
+  // separate filesystem in the build container.
+  const temp = await mkdtemp(join(import.meta.dirname, ".build-"));
   const output = join(import.meta.dirname, "dist");
   try {
     for (const [index, digest] of selected.entries()) {

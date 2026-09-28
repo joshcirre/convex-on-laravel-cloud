@@ -27,6 +27,21 @@ fail() {
 
 [ -n "${INSTANCE_NAME:-}" ] || fail "INSTANCE_NAME is required"
 [ -n "${INSTANCE_SECRET:-}" ] || fail "INSTANCE_SECRET is required"
+# Cloud's UI stores strings: "0" and "false" must not enable these flags.
+optional_flags=()
+for setting in DISABLE_BEACON REDACT_LOGS_TO_CLIENT DO_NOT_REQUIRE_SSL; do
+  case "${!setting:-}" in
+    1 | true)
+      case "$setting" in
+        DISABLE_BEACON) optional_flags+=(--disable-beacon) ;;
+        REDACT_LOGS_TO_CLIENT) optional_flags+=(--redact-logs-to-client) ;;
+        DO_NOT_REQUIRE_SSL) optional_flags+=(--do-not-require-ssl) ;;
+      esac
+      ;;
+    '' | 0 | false) ;;
+    *) fail "$setting must be 1, true, 0, false, or unset" ;;
+  esac
+done
 origin="${CONVEX_CLOUD_ORIGIN:-${APP_URL:-}}"
 [ -n "$origin" ] || fail "CONVEX_CLOUD_ORIGIN (or APP_URL) is required"
 origin="${origin%/}"
@@ -129,9 +144,7 @@ bin/convex-local-backend \
   --site-proxy-port "$site_port" \
   --convex-origin "$origin" \
   --convex-site "$site" \
-  ${DISABLE_BEACON:+--disable-beacon} \
-  ${REDACT_LOGS_TO_CLIENT:+--redact-logs-to-client} \
-  ${DO_NOT_REQUIRE_SSL:+--do-not-require-ssl} \
+  ${optional_flags[@]+"${optional_flags[@]}"} \
   ${db_flags[@]+"${db_flags[@]}"} \
   "${storage_flags[@]}" \
   "$db_spec" &
@@ -154,4 +167,6 @@ status=0
 kill -0 "$backend_pid" 2>/dev/null || { wait "$backend_pid" || status=$?; echo "start: convex-local-backend exited ($status)" >&2; }
 kill -0 "$proxy_pid" 2>/dev/null || { wait "$proxy_pid" || status=$?; echo "start: proxy exited ($status)" >&2; }
 stop
-exit "${status:-1}"
+# An unexpected successful child exit still leaves this service unavailable.
+[ "$status" -ne 0 ] || status=1
+exit "$status"
