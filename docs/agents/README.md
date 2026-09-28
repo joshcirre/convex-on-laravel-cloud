@@ -50,7 +50,7 @@ The [public environment API](https://laravel.com/cloud/docs/api/environments/upd
 
 Collect only missing decisions: Cloud organization, region, repository/branch, backend and dashboard names, whether a dashboard is wanted, and compute/database budget. Use a new deployment by default. Do not reuse another project's database, bucket, or instance secret. Record resource IDs and public URLs in a local deployment note without credentials.
 
-The backend needs one always-on instance, initially 2 GB RAM, a private MySQL cluster/database, and a private bucket. The optional dashboard adds another application instance. Consult [current pricing](https://cloud.laravel.com/pricing); do not promise free or fixed-cost hosting. The [trial](https://laravel.com/cloud/docs/free-trial) has limits.
+The backend needs one always-on instance, 1 GB RAM for a small demo to validate or 2 GB as a conservative starting point, a private MySQL cluster/database, and a private bucket. The optional dashboard adds another application instance. Consult [current pricing](https://cloud.laravel.com/pricing); do not promise free or fixed-cost hosting. The [trial](https://laravel.com/cloud/docs/free-trial) has limits.
 
 If the user has no account, guide them to [Laravel Cloud](https://cloud.laravel.com) to sign up, verify their account, choose a plan, and supply any requested payment details. The user handles passwords, payment information, and identity checks. An agent can guide this flow but cannot substitute CLI calls for account creation.
 
@@ -141,7 +141,7 @@ cloud instance:update "$BACKEND_INSTANCE_ID" --size=flex-2gb \
   --scaling-type=none --scale-to-zero=false --json -n --force
 ```
 
-Check `instance:sizes` for current choices first. Confirm exactly one running backend and hibernation disabled. v0.6.1 sends an older sleep-mode field; the [current instance API](https://laravel.com/cloud/docs/api/instances/update-instance) gives `hibernation_timeout` precedence. A successful command alone does not prove hibernation is off. Use the browser if readback shows otherwise or omits the effective setting.
+Check `instance:sizes` for current choices first. The command above shows the conservative 2 GB option; substitute the agreed available 1 GB size for a small demo and follow the [sizing checks](../../README.md#how-small-can-the-backend-be). Confirm exactly one running backend and hibernation disabled. v0.6.1 sends an older sleep-mode field; the [current instance API](https://laravel.com/cloud/docs/api/instances/update-instance) gives `hibernation_timeout` precedence. A successful command alone does not prove hibernation is off. Use the browser if readback shows otherwise or omits the effective setting.
 
 ## 5. Complete the browser configuration together
 

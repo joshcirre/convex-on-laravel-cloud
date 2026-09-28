@@ -49,7 +49,7 @@ Create an application from your repository and configure its environment:
 | Build commands | `bash build.sh` |
 | Deploy commands | Leave empty |
 | Start command | `bash start.sh` |
-| Compute | Start with 2 GB RAM (`flex-2gb` in Lawn's configuration) |
+| Compute | 1 GB for a small demo to validate; 2 GB for a conservative starting point (see sizing below) |
 | Replicas | One; disable autoscaling or set minimum and maximum to 1 |
 | Scale-to-zero / hibernation | Disabled |
 | Region | Same region as your MySQL database |
@@ -59,6 +59,16 @@ These are the direct commands used by Lawn's backend on Cloud. The included `npm
 Save the public HTTPS URL Cloud assigns. The examples below use `https://YOUR-BACKEND.laravel.cloud`; replace it with your actual URL. Do not include a trailing slash.
 
 For this reusable starter, keep the backend always on: it owns a database lease and maintains subscriptions and scheduled work. Multiple replicas sharing the same instance are not a supported scaling strategy for this starter. See [Cloud compute settings](https://laravel.com/cloud/docs/compute).
+
+### How small can the backend be?
+
+This starter already runs the **precompiled Rust executable directly**. `bash build.sh` downloads it; Cloud does not compile Rust or build your application's function bundle in the backend app. `npm start` is only an alias for the same Bash startup script.
+
+Convex's [upstream Fly configuration](https://github.com/get-convex/convex-backend/blob/main/self-hosted/advanced/fly/backend/fly.toml) allocates **1 GB RAM and four shared CPUs**. Its [guide](https://github.com/get-convex/convex-backend/blob/main/self-hosted/advanced/fly/README.md#troubleshooting) recommends increasing resources under load. That supports trying a 1 GB backend for a small demo; it does not establish an equivalent Cloud CPU tier or a universal minimum. The earlier 2 GB recommendation comes from the conservative Lawn-based setup, not an upstream requirement.
+
+The Rust process embeds V8 for queries, mutations, and default-runtime actions. Node remains installed for `"use node"` actions and this starter's small ingress proxy. [Function bundling](https://docs.convex.dev/functions/bundling) normally happens on the machine running the Convex CLI, then uploads to the backend; external Node packages can also require server-side installation. Removing Node is not a supported optimization for these scripts. The [number demo](https://github.com/joshcirre/convex-cloud-demo) has no `"use node"` actions.
+
+For a cost-conscious demo, choose an available 1 GB compute size and measure peak memory during startup, function deployment, subscriptions, mutations, and a backend redeploy. Leave headroom and increase RAM if you see memory pressure or restarts. A 512 MB backend is **unvalidated** here. Neither 1 GB nor 512 MB has been load-tested by this starter on Cloud. MySQL, the optional dashboard, and the frontend each have their own resource allocations.
 
 ### 2. Attach MySQL and a private bucket
 
