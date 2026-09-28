@@ -1,0 +1,12 @@
+{
+  "name": "convex-cloud-backend",
+  "private": true,
+  "description": "Self-hosted Convex backend on Laravel Cloud.",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "build": "bash build.sh",
+    "start": "bash start.sh"
+  }
+}
