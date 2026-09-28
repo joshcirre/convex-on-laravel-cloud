@@ -2,6 +2,8 @@
 
 Run the open-source Convex backend on [Laravel Cloud](https://cloud.laravel.com), with managed MySQL and private object storage.
 
+**[Try the live demo](https://convex-demo.laravel.cloud)** — open it in two browser windows, add a number, and watch both update in real time. The shared demo may take a moment to wake after inactivity.
+
 This starter follows the flow of Convex's [self-hosting guide](https://github.com/get-convex/convex-backend/blob/main/self-hosted/README.md) and [Fly.io deployment guide](https://github.com/get-convex/convex-backend/blob/main/self-hosted/advanced/fly/README.md). Its backend scripts come from the working [Lawn deployment](https://github.com/joshcirre/lawn/tree/main/convex-backend).
 
 This repository contains two independently deployed Cloud applications:
