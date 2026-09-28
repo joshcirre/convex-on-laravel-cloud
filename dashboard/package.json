@@ -1,0 +1,12 @@
+{
+  "name": "convex-cloud-dashboard",
+  "private": true,
+  "version": "0.1.0",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "HOSTNAME=:: node dist/app/dashboard-self-hosted/server.js"
+  }
+}

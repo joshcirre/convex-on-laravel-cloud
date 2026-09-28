@@ -3,6 +3,4 @@
 !.env.example
 node_modules/
 bin/
-# Local dashboard prototype; not part of the backend starter.
-dashboard/
 .DS_Store

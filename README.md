@@ -4,7 +4,14 @@ Run the open-source Convex backend on [Laravel Cloud](https://cloud.laravel.com)
 
 This starter follows the flow of Convex's [self-hosting guide](https://github.com/get-convex/convex-backend/blob/main/self-hosted/README.md) and [Fly.io deployment guide](https://github.com/get-convex/convex-backend/blob/main/self-hosted/advanced/fly/README.md). Its backend scripts come from the working [Lawn deployment](https://github.com/joshcirre/lawn/tree/main/convex-backend).
 
-This repository deploys one Convex backend application. Your frontend lives in its own project and connects to the backend's public URL. You can run the upstream dashboard locally against that backend.
+This repository contains two independently deployed Cloud applications:
+
+| Application | Root directory | Guide |
+| --- | --- | --- |
+| Convex backend | `/` | Follow the steps below |
+| Convex dashboard (optional) | `dashboard` | [Dashboard deployment](dashboard/README.md) |
+
+Your frontend lives in its own project and connects to the backend's public URL. Adding the dashboard does not change the backend's root directory or commands.
 
 **Validation:** Lawn's backend was verified on Laravel Cloud with release `precompiled-2026-09-26-27ef234` and `convex@1.41.0`. This starter pins that release and retains its Cloud networking workarounds. This standalone repository is ready for its first Cloud deployment test.
 
@@ -175,7 +182,11 @@ https://YOUR-BACKEND.laravel.cloud/http/sendEmail
 
 Use the backend origin without `/http` for Convex clients and the CLI. Use the `/http` base for HTTP actions, webhooks, and applicable auth callbacks. Inside functions, Convex supplies `CONVEX_CLOUD_URL` and `CONVEX_SITE_URL` from the origins configured above.
 
-## Running the dashboard
+## Deploying the dashboard
+
+Create a second Cloud application from this repository with root directory `dashboard`. Follow the [dashboard README](dashboard/README.md) for its build/start commands, public backend URL, and verification steps. It shares the existing backend and needs no database or bucket of its own.
+
+### Running the dashboard locally instead
 
 Run the upstream dashboard locally and connect it to your Cloud backend:
 
