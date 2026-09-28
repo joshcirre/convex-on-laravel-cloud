@@ -35,12 +35,15 @@ Create an application from your repository and configure its environment:
 | --- | --- |
 | Root directory | `/` (repository root) |
 | Runtime | Node.js 22 |
-| Build command | `npm run build` |
-| Start command | `npm start` |
+| Build commands | `bash build.sh` |
+| Deploy commands | Leave empty |
+| Start command | `bash start.sh` |
 | Compute | Start with 2 GB RAM (`flex-2gb` in Lawn's configuration) |
 | Replicas | One; disable autoscaling or set minimum and maximum to 1 |
 | Scale-to-zero / hibernation | Disabled |
 | Region | Same region as your MySQL database |
+
+These are the direct commands used by Lawn's backend on Cloud. The included `npm run build` and `npm start` scripts call the same Bash scripts, but use the direct commands above for this setup. Keep the long-running backend in the **Start command**, not **Deploy commands**.
 
 Save the public HTTPS URL Cloud assigns. The examples below use `https://YOUR-BACKEND.laravel.cloud`; replace it with your actual URL. Do not include a trailing slash.
 
