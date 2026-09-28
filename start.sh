@@ -10,7 +10,7 @@
 # served from the same origin under /http instead of a second port.
 #
 # Required env:
-#   INSTANCE_NAME        e.g. convex. Postgres database must be named the same
+#   INSTANCE_NAME        e.g. convex. SQL database must be named the same
 #                        with "-" -> "_" (the admin key is derived from it too).
 #   INSTANCE_SECRET      64 hex chars (openssl rand -hex 32). Never let it
 #                        default: the disk is ephemeral.
@@ -85,7 +85,7 @@ elif [ -n "${DATABASE_URL:-}" ]; then
   server="$(printf '%s' "$server" | sed -E 's#@([^.@/]+\.c-[0-9]+)\.aws-([a-z0-9-]+)\.pg\.laravel\.cloud#@\1.\2.aws.neon.tech#')"
   db_spec="$server"
 else
-  fail "attach Postgres before starting: Cloud filesystem storage is ephemeral"
+  fail "attach MySQL or Postgres before starting: Cloud filesystem storage is ephemeral"
 fi
 
 # --- file storage ------------------------------------------------------------

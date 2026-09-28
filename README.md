@@ -1,6 +1,6 @@
 # Self-hosting Convex on Laravel Cloud
 
-Run the open-source Convex backend on [Laravel Cloud](https://cloud.laravel.com), with managed Postgres and private object storage.
+Run the open-source Convex backend on [Laravel Cloud](https://cloud.laravel.com), with managed MySQL and private object storage.
 
 This starter follows the flow of Convex's [self-hosting guide](https://github.com/get-convex/convex-backend/blob/main/self-hosted/README.md) and [Fly.io deployment guide](https://github.com/get-convex/convex-backend/blob/main/self-hosted/advanced/fly/README.md). Its backend scripts come from the working [Lawn deployment](https://github.com/joshcirre/lawn/tree/main/convex-backend).
 
@@ -40,15 +40,15 @@ Create an application from your repository and configure its environment:
 | Compute | Start with 2 GB RAM (`flex-2gb` in Lawn's configuration) |
 | Replicas | One; disable autoscaling or set minimum and maximum to 1 |
 | Scale-to-zero / hibernation | Disabled |
-| Region | Same region as your Postgres database |
+| Region | Same region as your MySQL database |
 
 Save the public HTTPS URL Cloud assigns. The examples below use `https://YOUR-BACKEND.laravel.cloud`; replace it with your actual URL. Do not include a trailing slash.
 
 Keep the backend always on: it owns a database lease and maintains subscriptions and scheduled work. Multiple replicas sharing the same instance are not a supported scaling strategy for this starter. See [Cloud compute settings](https://laravel.com/cloud/docs/compute).
 
-### 2. Attach Postgres and a private bucket
+### 2. Attach MySQL and a private bucket
 
-Choose an instance name, such as `convex`. Create a managed Postgres cluster and a database named **`convex`**, then attach that database to the backend environment.
+Choose an instance name, such as `convex`. Create a managed MySQL cluster and a database named **`convex`**, then attach that database to the backend environment.
 
 The database name must match `INSTANCE_NAME`, replacing hyphens with underscores. For example, `my-convex` requires `my_convex`. If Cloud initially creates a database named `production`, create and attach the correctly named database instead.
 
@@ -58,11 +58,15 @@ The scripts accept Cloud's injected variables:
 
 | Resource | Accepted variables |
 | --- | --- |
-| Postgres | `DATABASE_URL`, or `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_CONNECTION=pgsql` |
+| MySQL | `DATABASE_URL` (`mysql://…`), or `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_CONNECTION=mysql` |
 | Bucket credentials | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
 | Bucket name | `AWS_BUCKET` |
 | Bucket endpoint | `AWS_ENDPOINT_URL` or `AWS_ENDPOINT` |
 | Bucket region | `AWS_REGION` or `AWS_DEFAULT_REGION`; defaults to `auto` |
+
+Set `DB_CONNECTION=mysql` when using the `DB_*` variables; the script's legacy fallback when it is omitted is Postgres. A `DATABASE_URL` must start with `mysql://`. Remove any stale `POSTGRES_URL` or `MYSQL_URL` overrides when using Cloud's attached database variables: those overrides take precedence over `DATABASE_URL` and `DB_*` (`POSTGRES_URL` wins if both are present).
+
+MySQL is the recommended database for this starter. Convex also supports Postgres, and the startup script retains support for it. Upstream documents testing with MySQL 8.
 
 **Both resources are required.** The starter refuses to boot without database and bucket configuration. Cloud's local filesystem is temporary; it cannot safely hold SQLite, deployed functions, or uploaded files between deployments.
 
@@ -96,7 +100,7 @@ Deploy from the Cloud dashboard. The build downloads the Linux binary for the bu
 Look for these startup values in the logs:
 
 ```text
-db=postgres-v5
+db=mysql-v5
 storage=--s3-storage
 proxy: [::]:3000 -> 127.0.0.1:3010
 ```
@@ -211,7 +215,7 @@ Only the URL belongs in client-visible variables. If CI deploys functions, give 
 | Missing instance name or secret | Set both in the backend environment before deployment. |
 | Attached database name mismatch | Use the `INSTANCE_NAME` database, with hyphens replaced by underscores. |
 | Database or bucket required error | Attach both resources and verify the injected variable names against the table above. |
-| Postgres TLS hostname error | The script handles Lawn's observed Cloud-to-Neon hostname pattern for `DATABASE_URL`/`DB_*`. For a different pattern, verify the provider's actual TLS hostname; do not disable TLS verification. |
+| Postgres TLS hostname error (optional Postgres setup only) | The script handles Lawn's observed Cloud-to-Neon hostname pattern for `DATABASE_URL`/`DB_*`. For a different pattern, verify the provider's actual TLS hostname; do not disable TLS verification. |
 | Healthy backend logs but Cloud reports unhealthy | Keep `proxy.mjs` and `start.sh` together. The proxy listens on IPv6 and forwards to the IPv4 backend. |
 | WebSocket 400: Connection header did not include upgrade | The supplied proxy restores upgrade headers affected by Cloud's ingress. Cloud's Reverb/Pusher WebSockets resource is not needed. |
 | Repeated Lease Lost errors | Check for duplicate replicas, overlapping manual deployments, or another environment using the same database identity. |
