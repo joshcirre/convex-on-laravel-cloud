@@ -11,7 +11,7 @@ This repository contains two independently deployed Cloud applications:
 | Convex backend | `/` | Follow the steps below |
 | Convex dashboard (optional) | `dashboard` | [Dashboard deployment](dashboard/README.md) |
 
-Your frontend lives in its own project and connects to the backend's public URL. Adding the dashboard does not change the backend's root directory or commands.
+Your frontend lives in its own project and connects to the backend's public URL. For a simple standalone example, use [convex-cloud-demo](https://github.com/joshcirre/convex-cloud-demo), based on Convex's official TanStack Start template. Adding the dashboard does not change the backend's root directory or commands.
 
 **Validation (2026-09-28):** This recipe is based on Lawn's completed Cloud deployment: Convex backed by MySQL and private object storage, the hosted Convex dashboard, a TanStack frontend, and a Laravel auth API. The backend release is `precompiled-2026-09-26-27ef234`, with `convex@1.41.0` and a dashboard image from the matching commit. The starter retains that deployment's networking configuration. Its scripts and local dashboard have been checked separately; deployment of this standalone repository still needs its own Cloud verification.
 
