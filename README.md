@@ -60,7 +60,7 @@ These are the direct commands used by Lawn's backend on Cloud. The included `npm
 
 Save the public HTTPS URL Cloud assigns. The examples below use `https://YOUR-BACKEND.laravel.cloud`; replace it with your actual URL. Do not include a trailing slash.
 
-For continuous service, keep the backend always on: it owns a database lease and maintains subscriptions and scheduled work. A disposable demo can opt into five-minute hibernation with cold starts and interrupted or delayed work; configured timeouts are not proof of actual sleep savings. Multiple replicas sharing the same instance are not a supported scaling strategy for this starter. See [Cloud compute settings](https://laravel.com/cloud/docs/compute).
+For continuous service, keep the backend always on: it owns a database lease and maintains subscriptions and scheduled work. A disposable demo can opt into five-minute hibernation with cold starts and interrupted or delayed work; configured timeouts are not proof of actual sleep savings. What keeps a sleeping backend awake is client WebSocket connections, not Convex's internal work, so pair hibernation with a frontend that [disconnects when idle](docs/costs.md#what-keeps-the-backend-awake). Multiple replicas sharing the same instance are not a supported scaling strategy for this starter. See [Cloud compute settings](https://laravel.com/cloud/docs/compute).
 
 ### How small can the backend be?
 

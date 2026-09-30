@@ -15,7 +15,19 @@ Start with **only the Convex backend, private MySQL, and one private bucket on C
 
 The September 28, 2026 test passed on a **1 GB backend**, **512 MB hosted dashboard**, and **512 MB hosted frontend** with MySQL and S3 storage. A 512 MB backend has not been validated. Those results used legacy compute IDs; newly available cheaper CPU families still need their own workload checks.
 
-Sleeping is appropriate for a disposable demo that accepts interruptions. It is not a substitute for always-on execution of scheduled Convex work. Existing subscriptions may disconnect or keep the service awake. MySQL sleeps only after it has no connections during its idle timeout, so Convex's connection pool may prevent database sleep. This last point is an inference from [MySQL's sleep behavior](https://laravel.com/cloud/docs/resources/databases/laravel-mysql#scale-to-zero), not a measured result for this deployment.
+Sleeping is appropriate for a disposable demo that accepts interruptions. It is not a substitute for always-on execution of scheduled Convex work. Open subscriptions keep the service awake unless the frontend disconnects idle clients (see below). MySQL sleeps only after it has no connections during its idle timeout, so Convex's connection pool may prevent database sleep. This last point is an inference from [MySQL's sleep behavior](https://laravel.com/cloud/docs/resources/databases/laravel-mysql#scale-to-zero), not a measured result for this deployment.
+
+## What keeps the backend awake
+
+**Inbound traffic, not Convex itself.** The live demo's backend logs from September 28–30, 2026 show two background tasks: a table-summary checkpoint about 10 minutes after writes, and Convex's outbound usage beacon. Neither stops the backend from sleeping; it went quiet for 6–13 hours at a time. Every long awake period began with a browser opening a sync WebSocket and ended when that socket closed. For example, one visitor's tab kept the backend up for about 50 minutes without doing anything.
+
+The Convex client keeps its socket open for as long as a tab exists, even in the background. To get the most out of scale-to-zero:
+
+- **Disconnect idle clients.** The [demo frontend](https://github.com/joshcirre/convex-cloud-demo#let-the-backend-sleep) closes its socket after 5 minutes without interaction (1 minute when the tab is hidden) and reconnects on the next interaction. Convex resubscribes and catches up. Copy `src/idleDisconnect.ts` and its one-line call into your frontend. The worst case becomes about 10 minutes awake per abandoned tab instead of indefinitely. After a sleep, the first request pays one cold start.
+- **Close dashboard tabs.** The dashboard is another sync client with no idle disconnect.
+- **Avoid wake-up traffic.** Uptime monitors, public health checks, and frequent crons that call the backend's public URL reset Cloud's idle timer.
+- **Don't count on scheduled work while asleep.** Convex crons and `scheduler.runAfter` jobs run only while the backend is awake. They are delayed until something wakes it, not triggered on time.
+- `DISABLE_BEACON=1` turns off the outbound usage ping. It does not affect sleep.
 
 Close frontend/dashboard tabs and development watchers, then test an idle interval, wake-up latency, reconnection, and a new mutation before claiming the deployment reliably sleeps and resumes. Monitor actual billed usage. Do not add an external health-check cron that continuously wakes a demo you intend to sleep.
 

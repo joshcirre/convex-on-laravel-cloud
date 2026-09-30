@@ -15,7 +15,8 @@ billing, and authorization in the browser. Explain any remaining browser steps.
 
 Use the low-cost demo profile: a 1 GB backend, the smallest private managed
 MySQL, private object storage, and five-minute scale-to-zero where supported.
-Explain cold starts and sleeping limitations. Run the frontend and dashboard
+Explain cold starts and sleeping limitations; make the frontend disconnect idle
+Convex clients so open tabs do not keep the backend awake. Run the frontend and dashboard
 locally unless I request hosted versions (512 MB each). Discover current size
 IDs and prices. Reuse existing authentication and GitHub access. Ask only for
 missing organization, region, names, and hosted-app preferences together.
@@ -55,7 +56,9 @@ The [public environment API](https://laravel.com/cloud/docs/api/environments/upd
 
 Collect only missing decisions: Cloud organization, region, repository/branch, backend and dashboard names, whether a dashboard is wanted, and whether this is a sleeping demo or an always-on service. A budget number is optional when the user already asked for minimum cost. Use a new deployment by default. Do not reuse another project's database, bucket, or instance secret. Record resource IDs and public URLs in a local deployment note without credentials. Discover available regions before offering them; the test requested US West but only Ohio was available as its closest US option. Do not hardcode that observation for future accounts.
 
-Start with the [low-cost profiles](../costs.md): the verified 1 GB backend, smallest private MySQL with 5 GB storage, and a private bucket. Keep the frontend and dashboard local unless hosted versions are requested; each hosted app worked on 512 MB. Use five-minute hibernation for a disposable demo that accepts cold starts and paused work, or disable backend hibernation for continuous scheduled work/subscriptions. Do not claim sleep savings until observed. Consult [current pricing](https://cloud.laravel.com/pricing); do not promise free or fixed-cost hosting. The [trial](https://laravel.com/cloud/docs/free-trial) has limits.
+Start with the [low-cost profiles](../costs.md): the verified 1 GB backend, smallest private MySQL with 5 GB storage, and a private bucket. Keep the frontend and dashboard local unless hosted versions are requested; each hosted app worked on 512 MB. Use five-minute hibernation for a disposable demo that accepts cold starts and paused work, or disable backend hibernation for continuous scheduled work/subscriptions. Do not claim sleep savings until observed.
+
+For a sleeping demo, open WebSocket subscriptions are what keep the backend awake, not Convex's internal work. Give the frontend an idle disconnect: use [convex-cloud-demo](https://github.com/joshcirre/convex-cloud-demo#let-the-backend-sleep) as is, or copy its `src/idleDisconnect.ts` and the `disconnectWhenIdle(...)` call into the user's app. Tell the user that dashboard tabs, uptime monitors, and crons that call the public backend URL also keep it awake. See [what keeps the backend awake](../costs.md#what-keeps-the-backend-awake). Consult [current pricing](https://cloud.laravel.com/pricing); do not promise free or fixed-cost hosting. The [trial](https://laravel.com/cloud/docs/free-trial) has limits.
 
 If the user has no account, guide them to [Laravel Cloud](https://cloud.laravel.com) to sign up, verify their account, choose a plan, and supply any requested payment details. The user handles passwords, payment information, and identity checks. An agent can guide this flow but cannot substitute CLI calls for account creation.
 
@@ -266,6 +269,7 @@ A successful build is insufficient. Record each result:
 - Open the frontend in two sessions and verify a live update without refresh; inspect the WebSocket connection if it fails.
 - If requested, log into the hosted dashboard with the admin key and inspect the same data. Its URL must target the correct backend.
 - Redeploy the backend, monitor recovery, and verify that the saved data and deployed functions remain available. If the demo exercises file storage, verify an uploaded file too.
+- For a sleeping demo, leave the frontend idle past its disconnect timeout and confirm in the backend logs that the `GET /api/<version>/sync 101` access entry appears, meaning the socket closed. Then interact with the page and confirm it reconnects and shows current data.
 - Recheck one backend instance, the chosen hibernation profile, private database/bucket, and absence of admin keys in public client configuration.
 
 Report the repository revision, CLI version, organization/resource IDs, public URLs, test results, and remaining steps. Separate locally checked behavior from live Cloud checks. Record secret **locations**, never their values. Back up the stable instance identity and document database/object-storage backup arrangements before using this as a production service. Leave failed resources documented for review; do not silently delete billed resources or data.
